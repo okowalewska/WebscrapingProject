@@ -1,0 +1,238 @@
+# Part 1
+
+# Necessary imports
+from urllib import request as re
+from bs4 import BeautifulSoup as BS
+import pandas as pd
+from collections import Counter
+import plotly.graph_objects as go
+
+# Reading the main Top 100 page
+url = 'https://lubimyczytac.pl/top100'
+html = re.urlopen(url)
+bs = BS(html.read(), 'html.parser')
+
+# Creating a dictionary with numbers of months and a list of pages numbers
+months = {"Styczeń": 1, "Luty": 2, "Marzec": 3, "Kwiecień": 4, "Maj": 5, "Czerwiec": 6, "Lipiec": 7, "Sierpień": 8, "Wrzesień": 9, "Październik": 10, "Listopad": 11, "Grudzień": 12}
+pages = [1, 2, 3, 4, 5]
+
+# Getting a list of months and names of tags for the Top 100 (tags will be used later, while creating pandas df)
+bs_name_list = bs.find_all('div', {'class':'filtr__itemTitle'})
+dates = {}
+tags = []
+for name in bs_name_list:
+    month = name.get_text()
+    tags.append(month)
+    month = name.get_text()[:-5]
+    month_no = months[month]
+    year = name.get_text()[-4:]
+    dates[month_no] = year
+
+# Part 2
+
+# Defining a function that collects the data for book title, author, rating etc. for every month from the list
+def get_dataframe(pagesx, keyx, datesx):
+    positions = []
+    titles = []
+    authors = []
+    ratings = []
+    readers = []
+    opinions = []
+    no_of_ratings = []
+
+    for i in pagesx:
+        url = "https://lubimyczytac.pl/top100?page=" + str(i) + "&listId=listTop100&month=" + str(keyx) + "&year=" + datesx[keyx] + "&paginatorType=Standard"
+        html = re.urlopen(url)
+        bs = BS(html.read(), 'html.parser')
+
+        bs_position_list = bs.find_all('span', {'class':'authorAllBooks__singleImgInfoBottom'})
+        for name in bs_position_list:
+            position = name.get_text()
+            position = " ".join(position.split())
+            position = position[:-2]
+            positions.append(int(position))
+
+        bs_title_list = bs.find_all('a', {'class':'authorAllBooks__singleTextTitle float-left'})
+        for name in bs_title_list:
+            title = name.get_text()
+            title = " ".join(title.split())
+            titles.append(title)
+
+        bs_author_list = bs.find_all('div', {'class':'authorAllBooks__singleTextAuthor authorAllBooks__singleTextAuthor--bottomMore'})
+        for name in bs_author_list:
+            author = name.get_text()
+            author = " ".join(author.split())
+            authors.append(author)
+
+        bs_rating_list = bs.find_all('span', {'class':'listLibrary__ratingStarsNumber'})
+        for name in bs_rating_list:
+            rating = name.get_text()
+            rating = " ".join(rating.split())
+            ratings.append(float(rating.replace(',', '.')))
+
+        bs_reader_list = bs.find_all('span', {'class':'small grey mr-2 mb-3'})
+        for name in bs_reader_list:
+            reader = name.get_text()
+            reader = " ".join(reader.split())
+            reader = reader[12:]
+            readers.append(int(reader))
+
+        bs_opinion_list = bs.find_all('span', {'class':'ml-2 small grey'})
+        for name in bs_opinion_list:
+            opinion = name.get_text()
+            opinion = " ".join(opinion.split())
+            opinion = opinion[8:]
+            opinions.append(int(opinion))
+
+        bs_no_of_ratings = bs.find_all('div', {'class':'listLibrary__ratingAll'})
+        for name in bs_no_of_ratings:
+            number = name.get_text()
+            number = " ".join(number.split())
+            number = number[:-5]
+            no_of_ratings.append(int(number))
+
+    df = pd.DataFrame({'position':positions, 'title': titles, 'author': authors, 'rating': ratings, 'readers': readers, 'opinions': opinions, 'no. of ratings': no_of_ratings})
+    return df, titles
+
+# Below, data frames are created for every month.
+df0, titles0 = get_dataframe(pages, list(dates.keys())[0], dates)
+df1, titles1 = get_dataframe(pages, list(dates.keys())[1], dates)
+df2, titles2 = get_dataframe(pages, list(dates.keys())[2], dates)
+df3, titles3 = get_dataframe(pages, list(dates.keys())[3], dates)
+df4, titles4 = get_dataframe(pages, list(dates.keys())[4], dates)
+df5, titles5 = get_dataframe(pages, list(dates.keys())[5], dates)
+df6, titles6 = get_dataframe(pages, list(dates.keys())[6], dates)
+df7, titles7 = get_dataframe(pages, list(dates.keys())[7], dates)
+df8, titles8 = get_dataframe(pages, list(dates.keys())[8], dates)
+df9, titles9 = get_dataframe(pages, list(dates.keys())[9], dates)
+df10, titles10 = get_dataframe(pages, list(dates.keys())[10], dates)
+df11, titles11 = get_dataframe(pages, list(dates.keys())[11], dates)
+
+# Part 3
+
+# Concatenating data frames for each month into one data frame Top100
+top100 = pd.concat([df0, df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11], axis=1, keys=tags)
+
+# Printing the data frame for the ratings from last year
+print("Ratings from last year: \n", top100)
+
+# Part  4
+
+# Analysis of the collected information
+
+# Getting one list of titles from every month (later we will count how many of them appeared most often)
+all_titles = titles0 + titles1 + titles2 + titles3 + titles4 + titles5 + titles6 + titles7 + titles8 + titles9 + titles10 + titles11
+
+# Counting how many times each title appeared in Top100
+descending_order = Counter(all_titles).most_common()
+
+# Getting the number of titles that appeared the most amount of times during the last year
+list_of_appearance = []
+
+for item in descending_order:
+    appearance = item[1]
+    list_of_appearance.append(appearance)
+
+max_value = max(list_of_appearance)
+top_value = list_of_appearance.count(max_value)
+
+most_common_items = descending_order[:top_value]
+
+# Turning a list of tuples into a list of titles
+most_common = []
+for item in most_common_items:
+    most_common.append(item[0])
+
+print("Books most frequently apearing in the Top100: ", most_common)
+print("Top100 ranking for last month:")
+print("\n", df0) #kwiecień
+
+# Getting top 5 titles with highest average rating
+a = df0[df0['title'] == 'Nowy wspaniały świat'].index.values
+print("Index of the title 'Nowy wspaniały świat': ", a)
+print("Rating from this month: ", df0.at[5, 'rating'])
+print("Mean of all the ratings from last month: ", top100['Kwiecień 2021'].rating.mean())
+
+print("12 most popular books:\n")
+top = {}
+rating_values = []
+for title in most_common:
+    a = df0[df0['title'] == title].index.values
+    r = df0.at[a[0], 'rating']
+    rating_values.append(r)
+    top[title] = r
+    print(title, a, r)
+
+print("\n", top) # Final list of titles and ratings
+
+rating_values.sort()
+top5_ratings = rating_values[-5:]
+top5_ratings = set(top5_ratings)
+
+# Getting a list of Top5 titles
+top5 = []
+for key in top:
+    for i in top5_ratings:
+        if top[key] == i:
+            top5.append(key)
+
+print("Top5 titles are: \n", top5)
+
+# Creating a list of dataframes for every month to iterate over
+all_df = []
+all_df.extend([df0, df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11])
+
+# Definig a function that gets a list of all ratings for one title
+def get_ratings(dfx, titlex, listx):
+    index = dfx[dfx['title'] == titlex].index.values
+    rate = dfx.at[index[0], 'position']
+    listx.append(rate)
+    return listx
+
+# Getting lists of all ratings for all titles
+title1 = []
+title2 = []
+title3 = []
+title4 = []
+title5 = []
+
+for dframe in all_df:
+    title1 = get_ratings(dframe, top5[0], title1)
+
+for dframe in all_df:
+    title2 = get_ratings(dframe, top5[1], title2)
+
+for dframe in all_df:
+    title3 = get_ratings(dframe, top5[2], title3)
+
+for dframe in all_df:
+    title4 = get_ratings(dframe, top5[3], title4)
+
+for dframe in all_df:
+    title5 = get_ratings(dframe, top5[4], title5)
+
+# Defining function that creates a dataframe to plot
+def create_dataframe(tagsx, listx):
+    df = pd.DataFrame({'month': tagsx, 'rating': listx})
+    return df
+
+top_1 = create_dataframe(tags, title1)
+top_2 = create_dataframe(tags, title2)
+top_3 = create_dataframe(tags, title3)
+top_4 = create_dataframe(tags, title4)
+top_5 = create_dataframe(tags, title5)
+
+myorder = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+tags[:] = [tags[i] for i in myorder]
+
+print("Ratings of the most popular book title from last year: \n", top_1)
+
+# Function that plots how the ratings were changing for a title over the months
+def plot_position(dfx):
+    dfx['month'] = dfx.index
+    fig = go.Figure(go.Scatter(x = dfx['month'], y = dfx['rating']))
+    fig.update_layout(yaxis_title = 'Position in ranking', xaxis_title = 'Month')
+    fig.update_layout(xaxis = dict(tickmode = 'array', tickvals = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], ticktext = tags))
+    return fig
+
+plot_position(top_1)
