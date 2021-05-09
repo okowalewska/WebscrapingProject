@@ -23,4 +23,4 @@ scrapy crawl scrapy_books
 
 If you want to store the results in a .csv file you can add -o file_name.csv:
 
-scrapy crawl scrapy_books
+scrapy crawl scrapy_books -o file_name.csv
